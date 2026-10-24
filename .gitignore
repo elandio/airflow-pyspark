@@ -1,0 +1,23 @@
+# Airflow
+logs/
+*.pid
+airflow.db
+airflow-webserver.pid
+
+# Segredos
+.env
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Dados locais
+data/*
+!data/.gitkeep
+
+# IDE / SO
+.vscode/
+.idea/
+.DS_Store
