@@ -1,0 +1,84 @@
+# Colunas da TRS da PIM-PF (Pesquisa Industrial Mensal - Produção Física, IBGE/SIDRA).
+#
+#   origem     nome da coluna no DataFrame entregue ao apply_schema (nomes da RAW gerados por
+#              normalize_replace, após o tratamento do notebook_trs)
+#   destino    nome na TRS, em MAIÚSCULO com prefixo: COD_ ID_ NM_ DS_ SG_ NR_ QT_ VL_ PC_ DT_ DH_ FL_
+#   tipo       string | int | bigint | double | float | boolean | date | timestamp | decimal(p,s)
+#
+# Os códigos do SIDRA ficam como string: são identificadores, não quantidades.
+# Valor que não converte para o tipo vira NULL (o apply_schema não rejeita).
+#
+# Símbolos do SIDRA em VALOR (tratados no notebook_trs antes do apply_schema):
+#   ..  não se aplica   |   ...  dado não disponível   |   X  dado omitido (sigilo)   |   -  zero absoluto
+
+colunas:
+  # --- localidade
+  - origem: BRASIL_GRANDE_REGIAO_E_UNIDADE_DA_FEDERACAO_CODIGO
+    destino: CD_BR_REGIAO_UF
+    tipo: string
+    descricao: Código IBGE da localidade (1 Brasil, 1 a 5 Grandes Regiões, 11 a 53 UFs); único só junto com COD_NIVEL_TERRITORIAL
+
+  - origem: BRASIL_GRANDE_REGIAO_E_UNIDADE_DA_FEDERACAO
+    destino: NM_BR_REGIAO_UF
+    tipo: string
+    descricao: Nome da localidade (ex. Brasil, Nordeste, Amazonas)
+
+  # --- variável (indicador)
+  - origem: VARIAVEL_CODIGO
+    destino: CD_VARIAVEL
+    tipo: string
+    descricao: Código da variável no SIDRA (ex. 12606)
+
+  - origem: VARIAVEL
+    destino: NM_VARIAVEL
+    tipo: string
+    descricao: Nome da variável (ex. PIMPF - Número-índice (2022=100), variação M/M-12)
+
+  # --- período
+  - origem: MES_CODIGO
+    destino: CD_MES_ANO
+    tipo: string
+    descricao: Mês de referência no formato AAAAMM (ex. 202609)
+
+  - origem: MES
+    destino: NM_MES_ANO
+    tipo: string
+    descricao: Mês de referência por extenso (ex. setembro 2026)
+
+  # --- atividade industrial
+  - origem: SECOES_E_ATIVIDADES_INDUSTRIAIS_CNAE_2_0_CODIGO
+    destino: CD_SETOR_CNAE_20
+    tipo: string
+    descricao: Código da seção ou atividade industrial no SIDRA (classificação CNAE 2.0; ex. 129314)
+
+  - origem: SECOES_E_ATIVIDADES_INDUSTRIAIS_CNAE_2_0
+    destino: NM_SETOR_CNAE_20
+    tipo: string
+    descricao: Nome da seção ou atividade industrial CNAE 2.0 (ex. 3.10 Fabricação de produtos alimentícios)
+
+  # --- nível territorial: Brasil, Grande Região ou Unidade da Federação
+  - origem: NIVEL_TERRITORIAL_CODIGO
+    destino: CD_NIVEL_TERRITORIAL
+    tipo: string
+    descricao: Código do nível territorial no SIDRA (1 Brasil, 2 Grande Região, 3 Unidade da Federação)
+
+  - origem: NIVEL_TERRITORIAL
+    destino: NM_NIVEL_TERRITORIAL
+    tipo: string
+    descricao: Nome do nível territorial (Brasil, Grande Região, Unidade da Federação)
+
+  # --- medida
+  - origem: UNIDADE_DE_MEDIDA_CODIGO
+    destino: CD_UNIDADE_MEDIDA
+    tipo: string
+    descricao: Código da unidade de medida no SIDRA (30 Número-índice, 2 %)
+
+  - origem: UNIDADE_DE_MEDIDA
+    destino: NM_UNIDADE_MEDIDA
+    tipo: string
+    descricao: Unidade de medida do valor (Número-índice ou %)
+
+  - origem: VALOR
+    destino: VL_INDICADOR
+    tipo: double
+    descricao: Valor da variável na unidade de medida informada

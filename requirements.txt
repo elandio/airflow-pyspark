@@ -1,0 +1,12 @@
+# Dependências de execução das pipelines (Docker e venv).
+# Versões alinhadas às constraints do Airflow 2.10.5 / Python 3.12, exceto o
+# pyspark, fixado em 3.5.3 (as constraints trazem 3.5.4).
+# Mudou este arquivo: 
+# `docker compose build && docker compose up -d` e
+# `pip install -r requirements-dev.txt` no venv.
+pyspark==3.5.3
+PyYAML==6.0.2
+pandas==2.1.4
+openpyxl==3.1.5
+requests==2.32.3
+pyarrow==19.0.0                  # parquet no pandas (to_parquet/read_parquet); mesma versão do container

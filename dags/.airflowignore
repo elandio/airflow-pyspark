@@ -1,0 +1,3 @@
+# Arquivos que o Airflow NÃO deve importar como DAG (sintaxe: regexp, uma por linha).
+# Os notebooks rodam em subprocesso pelo runner; importados pelo scheduler, executariam a carga inteira.
+notebook_[^/]*\.py$

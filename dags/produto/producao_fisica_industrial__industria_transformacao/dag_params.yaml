@@ -1,0 +1,37 @@
+# Produto (BIZ) — gera a DAG producao_fisica_industrial__industria_transformacao (_dag_factory_produto.py).
+# Chaves documentadas em src/dataflow_commons/config_produto.py.
+#
+# params_dag.schedule
+#   datasets   TRS que disparam o produto (URI do Dataset publicado pela task trs da ingestão)
+#   condicao   todos (padrão): só depois de todas atualizarem | qualquer: a primeira que atualizar
+#   cron       opcional: roda também nesse horário, UTC (ex.: "0 6 * * 1")
+# tasks
+#   transform_biz  obrigatória: notebook_biz.py lê a TRS, aplica as regras e grava em 'saida';
+#                  'parametros' (livre) chega ao notebook em get_context_biz().parametros
+#   load_dw        opcional: recarrega a 'tabela' do DW ([schema.]tabela) com a 'saida';
+#                  'conexao' = conn_id (padrão mssql_dw); DDL idempotente em ddl_dw.sql
+
+params_dag:
+  dominio: producao_fisica_industrial
+  produto: industria_transformacao        # dag_id = dominio__produto (gerado, como na ingestão)
+  schedule:
+    datasets:
+      - trs://producao_fisica_industrial/ibge/sidra/pimpf
+    condicao: todos                       # todos (E) | qualquer (OU)
+    # cron: "0 6 * * 1"                   # opcional: roda também nesse horário (UTC)
+  owner: dados
+  tags: [producao_fisica_industrial]
+  retries: 2
+  execution_timeout_min: 30
+
+tasks:
+  transform_biz:
+    saida: biz://producao_fisica_industrial/industria_transformacao/indice_atividade_uf
+    parametros:                           # o notebook lê em ctx.parametros
+      ano: "2025"                         # Considereos dados referentes ao ano de 2025
+      cd_variavel_indice: "12606"         # Número-índice daprodução física industrial (2022=100).
+      cd_nivel_uf: "3"                    # nível territorial: para cada Unidade da Federação
+      atividade_transformacao: '^3\.\d+ ' # atividade da Indústria de Transformação
+  load_dw:                                # recarrega a tabela do DW (DDL em ddl_dw.sql)
+    tabela: indice_atividade_uf
+    # conexao: mssql_dw                   # opcional: conn_id da Connection do Airflow

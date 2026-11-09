@@ -1,0 +1,28 @@
+# Airflow
+logs/
+*.pid
+airflow.db
+airflow-webserver.pid
+
+# Segredos
+.env
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+
+# Notebooks: versionar só o .py (formato percent)
+*.ipynb
+.ipynb_checkpoints/
+
+# Dados locais (data lake de dev)
+data_lake/*
+!data_lake/.gitkeep
+
+# IDE / SO
+.vscode/
+.idea/
+.DS_Store

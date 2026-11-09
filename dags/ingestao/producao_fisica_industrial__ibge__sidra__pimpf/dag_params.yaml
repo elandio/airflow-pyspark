@@ -1,0 +1,92 @@
+# =============================================================================
+# dag_params.yaml — parâmetros da ingestão (lido pela fábrica de DAGs e pelo ctx)
+# =============================================================================
+# Regras gerais
+#   - Todas as entradas ficam sob uma de 4 chaves: params_dag, lnd, raw, trs.
+#   - Valores em snake_case minúsculo, sem acento e sem "__" (o "__" é o separador).
+#   - Só crie chave nova se precisar; mantenha as existentes com o mesmo nome e significado.
+#   - A pasta desta ingestão deve se chamar exatamente <dag_id> (validado ao carregar).
+#
+# params_dag  -> identidade e agendamento da DAG
+#   dominio          Área de negócio. Ex.: agropecuaria, financeiro.
+#   orgao_origem     Instituição, empresa ou entidade responsável pela produção/propriedade
+#                    do dado original. Ex.: mapa, ibge, conab.
+#   fonte_dados      Sistema, API, portal ou plataforma pelo qual o dado é obtido.
+#                    Ex.: sipeagro, sidra, portal_dados_abertos.
+#   dataset          Conjunto de dados. Ex.: fertilizantes, vendas_insumos.
+#   dag_id           GERADO: dominio__orgao_origem__fonte_dados__dataset. Não preencha.
+#                    (se preencher, precisa ser idêntico ao gerado)
+#                    Os mesmos 4 campos montam os diretórios de dados:
+#                    <camada>/<dominio>/<orgao_origem>/<fonte_dados>/<dataset>
+#   schedule         Cron (ex.: "0 6 * * 1" = segunda, 06:00) ou preset (@daily).
+#   owner, tags, retries, execution_timeout_min   Opcionais.
+#   tasks            OPCIONAL. Sem ela a DAG é: lnd >> raw >> trs >> finish (notebook_lnd.py, notebook_raw.py,
+#                    notebook_trs.py). Para ter mais tasks, declare TODAS (inclusive a lnd). Cada chave
+#                    é o task_id (snake_case; 'finish' é reservado) e aceita:
+#       notebook       Obrigatório. notebook_<camada>[_<subbase>].py, camada = lnd | raw | trs.
+#                      A camada e a sub-base são lidas do nome do arquivo. A LND não tem sub-base
+#                      (o download é único; as sub-bases são separadas na RAW).
+#       dependencies   Lista de task_id que precisam terminar antes.
+#       task_group     Nome de um grupo definido em task_groups.
+#       retries        Sobrescreve params_dag.retries só nesta task.
+#       trigger_rule   Regra do Airflow (padrão all_success). Ex.: all_done.
+#   task_groups      OPCIONAL. Agrupa tasks na interface: {nome_do_grupo: {tooltip: "texto"}}
+#
+# lnd  -> camada de aterrissagem: dado exatamente como veio da fonte
+#   fonte_dados      ATENÇÃO: aqui é um mapa (não confundir com params_dag.fonte_dados).
+#     url                URL base da fonte, ou null. Pode ter {period_id}.
+#     arquivo            OPCIONAL. Nome do arquivo SEM extensão. Pode ter {period_id}. Ex.: vendas_{period_id}
+#                        Padrão: <dataset>_<period_id>. O tipo (json, csv, parquet...) vai no write_lnd.
+#     timeout_s          Timeout das requisições, em segundos.
+#     tamanho_minimo_bytes  Abaixo disso o arquivo é considerado inválido.
+#   O que atualizar NÃO é configurado aqui: o notebook da LND monta a lista da fonte, filtra com
+#   state.check_update (última atualização gravada para o dag_id) e devolve os period_id com
+#   state.push_update_list. RAW e TRS recebem essa lista (XCom) em ctx.update_list.
+#   O grupo finish (criado pela fábrica) grava a última atualização e apaga a LND ao final.
+#
+# raw  -> dado original em Parquet, tudo string, colunas normalizadas
+#   leitura            Parâmetros padrão de read_lnd_csv (separador, encoding, cabecalho).
+#                      Para XLSX/API/PDF o notebook lê como precisar; estas chaves são opcionais.
+#   subbases.<subbase>  Sobrescreve chaves desta seção só para a task daquela sub-base
+#                      (mescla sobre a base). Ex.: raw.subbases.anual.leitura.separador.
+#
+# trs  -> dado final tipado, único schema, uma pasta por período (read_trs lê todos)
+#   schema             Arquivo com as colunas da TRS (origem, destino, tipo...). Obrigatório.
+#                      O apply_schema só renomeia e converte (cast): valor que não converte vira NULL.
+#   subbases.<subbase>.schema     Schema da TRS de cada sub-base (uma TRS por sub-base).
+#                      Com sub-bases, 'trs.schema' na raiz só é necessário para tasks sem sub-base.
+# =============================================================================
+
+params_dag:
+  dominio: producao_fisica_industrial
+  orgao_origem: ibge
+  fonte_dados: sidra
+  dataset: pimpf
+  schedule: "0 6 * * 1"
+  owner: dados
+  tags: [ibge, producao_fisica_industrial]
+  retries: 2
+  execution_timeout_min: 60
+  # --- Exemplo de DAG com mais tasks (sub-bases dentro de um download único) -----------------
+  # task_groups:
+  #   mensal: {tooltip: "Sub-base mensal"}
+  # tasks:
+  #   lnd:        {notebook: notebook_lnd.py}
+  #   raw_mensal: {notebook: notebook_raw_mensal.py, dependencies: [lnd], task_group: mensal}
+  #   raw_anual:  {notebook: notebook_raw_anual.py,  dependencies: [lnd]}
+  #   trs_mensal: {notebook: notebook_trs_mensal.py, dependencies: [raw_mensal], task_group: mensal}
+  #   trs_anual:  {notebook: notebook_trs_anual.py,  dependencies: [raw_anual], retries: 0}
+  # E em trs: subbases: {mensal: {schema: schema_trs_mensal.yaml}, anual: {schema: schema_trs_anual.yaml}}
+
+lnd:
+  fonte_dados:
+    url_periodos: "https://servicodados.ibge.gov.br/api/v3/agregados/8888/periodos"
+    url_dados: "https://apisidra.ibge.gov.br/values/t/8888/n1/all/n2/all/n3/all/v/all/p/{year_month}/c544/all/d/m"    
+
+raw:
+  leitura:
+    separador: ""
+    encoding: ""
+
+trs:
+  schema: schema_trs.yaml
